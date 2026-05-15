@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>handsoff-vercel-app</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#ff3b3b;
+  --red2:#ff6b4a;
+  --dark:#060408;
+  --border:#1e1216;
+  --muted:#3d2530;
+  --text:#ece8e8;
+  --dim:#5c4450;
+  --ok:#8de1b1;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--dark);color:var(--text);font-family:'Space Mono',monospace}
+button,input{font:inherit}
+#bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+#landing,#login-page,#game{position:absolute;inset:0;z-index:10}
+#landing{display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+#login-page{display:none;flex-direction:column;align-items:center;justify-content:center}
+#game{display:none;flex-direction:column}
+#floating-hands{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1}
+.fh{position:absolute;font-size:120px;opacity:0.055;animation:floatHand 12s infinite ease-in-out;user-select:none}
+@keyframes floatHand{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-30px) rotate(10deg)}}
+#landing-content{position:relative;z-index:2;text-align:center;padding:40px}
+#logo-text{font-family:'Bebas Neue',sans-serif;font-size:clamp(72px,12vw,140px);letter-spacing:8px;color:var(--red);line-height:0.9;animation:glitchIn 0.7s ease forwards}
+@keyframes glitchIn{0%{opacity:0;transform:skewX(12deg) scaleY(1.15)}35%{opacity:1;transform:skewX(-4deg)}65%{transform:skewX(2deg)}100%{transform:none}}
+#logo-sub{font-size:11px;letter-spacing:6px;color:var(--dim);margin-top:12px}
+#vs-badge{display:inline-flex;align-items:center;gap:16px;margin:28px 0;font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:4px;color:var(--dim)}
+#vs-badge span{color:var(--red);font-size:48px}
+#landing-gestures{display:flex;gap:28px;margin:4px 0 32px;justify-content:center}
+.lg-card{width:90px;height:90px;border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:all 0.3s;cursor:default;position:relative;overflow:hidden}
+.lg-card::before{content:'';position:absolute;inset:0;background:var(--red);transform:scaleY(0);transform-origin:bottom;transition:transform 0.3s;z-index:0}
+.lg-card:hover::before{transform:scaleY(1)}
+.lg-card:hover .lg-name{color:#fff}
+.lg-icon{font-size:36px;position:relative;z-index:1}
+.lg-name{font-size:9px;letter-spacing:3px;color:var(--dim);position:relative;z-index:1;transition:color 0.3s}
+#enter-btn{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:6px;padding:14px 52px;background:transparent;border:1px solid var(--red);color:var(--red);cursor:pointer;transition:all 0.25s;position:relative;overflow:hidden}
+#enter-btn::before{content:'';position:absolute;inset:0;background:var(--red);transform:translateX(-100%);transition:transform 0.25s;z-index:0}
+#enter-btn:hover::before{transform:translateX(0)}
+#enter-btn:hover{color:#fff}
+#enter-btn span{position:relative;z-index:1}
+#scroll-hint{font-size:9px;letter-spacing:3px;color:var(--muted);margin-top:20px;animation:pulse 2.2s infinite}
+@keyframes pulse{0%,100%{opacity:0.35}50%{opacity:1}}
+.creator-bio{margin-top:28px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.creator-name{font-size:10px;letter-spacing:4px;color:var(--text)}
+.creator-links{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.creator-links a{font-size:10px;letter-spacing:2px;color:var(--dim);text-decoration:none;border-bottom:1px solid transparent;transition:color .2s,border-color .2s}
+.creator-links a:hover{color:var(--red);border-color:var(--red)}
+#login-box{position:relative;z-index:2;width:min(420px,calc(100vw - 32px));border:1px solid var(--border);background:rgba(7,4,6,0.94);padding:48px 44px;text-align:center}
+#login-box::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:80px;height:2px;background:var(--red)}
+#login-box::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:40px;height:1px;background:var(--red);opacity:0.4}
+#login-title{font-family:'Bebas Neue',sans-serif;font-size:48px;letter-spacing:7px;color:var(--red);margin-bottom:4px}
+#login-subtitle{font-size:9px;letter-spacing:4px;color:var(--dim);margin-bottom:38px}
+.lf{display:flex;flex-direction:column;gap:6px;margin-bottom:20px;text-align:left}
+.lf label{font-size:9px;letter-spacing:3px;color:var(--dim)}
+.lf input{background:transparent;border:none;border-bottom:1px solid var(--muted);color:var(--text);font-size:14px;padding:9px 0;outline:none;letter-spacing:2px;transition:border-color 0.3s;width:100%}
+.lf input:focus{border-color:var(--red)}
+.lf input::placeholder{color:var(--muted)}
+#login-error{font-size:9px;letter-spacing:2px;color:var(--red);margin-bottom:14px;min-height:14px;opacity:0;transition:opacity 0.3s}
+#login-error.show{opacity:1}
+#login-btn{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:5px;padding:13px 0;width:100%;background:transparent;border:1px solid var(--red);color:var(--red);cursor:pointer;transition:all 0.25s;position:relative;overflow:hidden;margin-bottom:22px}
+#login-btn::before{content:'';position:absolute;inset:0;background:var(--red);transform:translateX(-100%);transition:transform 0.25s;z-index:0}
+#login-btn:hover::before{transform:translateX(0)}
+#login-btn:hover{color:#fff}
+#login-btn span{position:relative;z-index:1}
+#login-btn[disabled]{opacity:.55;cursor:wait}
+.ldiv{display:flex;align-items:center;gap:12px;margin:0 0 16px}
+.ldiv::before,.ldiv::after{content:'';flex:1;height:1px;background:var(--border)}
+.ldiv span{font-size:9px;letter-spacing:3px;color:var(--muted)}
+.lhint{font-size:9px;letter-spacing:2px;color:var(--muted);line-height:1.9;margin-bottom:20px}
+#back-btn,#logout-btn{font-size:9px;letter-spacing:3px;color:var(--dim);background:none;border:none;cursor:pointer;transition:color 0.2s}
+#back-btn:hover,#logout-btn:hover{color:var(--text)}
+#transition-screen{position:absolute;inset:0;background:var(--dark);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px}
+#transition-text{font-family:'Bebas Neue',sans-serif;font-size:60px;letter-spacing:8px;color:var(--red)}
+.bar-loader{width:200px;height:2px;background:var(--border)}
+.bar-fill{height:100%;background:var(--red);width:0%;transition:width 1.5s ease}
+#game-header{display:flex;align-items:center;justify-content:space-between;padding:10px 24px;border-bottom:1px solid var(--border);min-height:52px;background:rgba(6,3,5,0.85);gap:16px}
+#game-logo{font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:5px;color:var(--red)}
+#header-right{display:flex;align-items:center;gap:18px}
+#scoreboard{display:flex;border:1px solid var(--border)}
+.sc-item{padding:6px 20px;text-align:center;border-right:1px solid var(--border)}
+.sc-item:last-child{border-right:none}
+.sc-label{font-size:8px;letter-spacing:3px;color:var(--dim);display:block}
+.sc-val{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--text);display:block;line-height:1.1}
+.sc-val.acc{color:var(--red)}
+#player-meta{text-align:right}
+#player-tag-name{font-size:10px;letter-spacing:3px;color:var(--red)}
+#career-record{font-size:9px;letter-spacing:2px;color:var(--dim);margin-top:4px}
+#mobile-action-bar{display:none;padding:12px 16px;border-bottom:1px solid var(--border);background:rgba(6,3,5,0.92);position:sticky;top:0;z-index:70}
+#game-arena{display:flex;flex:1;min-height:0;overflow:hidden}
+.arena-side{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;position:relative}
+#player-arena{border-right:1px solid var(--border)}
+.side-header{font-size:9px;letter-spacing:4px;color:var(--dim);margin-bottom:10px;text-align:center}
+#video-container,#cpu-container{position:relative;width:100%;max-width:360px;aspect-ratio:4/3;background:#040103;border:1px solid var(--border);overflow:hidden}
+#video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);display:block}
+#hand-canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#gesture-tag,#cpu-tag{position:absolute;bottom:0;left:0;right:0;background:rgba(5,2,4,0.92);border-top:1px solid var(--border);padding:7px 12px;display:flex;align-items:center;justify-content:space-between}
+#gesture-name,#cpu-gesture-name{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:4px}
+#gesture-name{color:var(--red)}
+#cpu-gesture-name{color:var(--red2)}
+#gesture-conf,#cpu-status-text{font-size:9px;letter-spacing:2px;color:var(--dim)}
+#center-overlay{position:absolute;left:50%;transform:translateX(-50%);top:50%;margin-top:-40px;z-index:50;pointer-events:none;text-align:center}
+#countdown-num{font-family:'Bebas Neue',sans-serif;font-size:100px;line-height:1;color:var(--red);opacity:0;transition:opacity 0.15s}
+#result-announce{font-family:'Bebas Neue',sans-serif;font-size:44px;letter-spacing:4px;padding:10px 28px;border:2px solid var(--red);background:rgba(5,2,4,0.97);color:var(--red);display:none;white-space:nowrap}
+#result-announce.lose{color:var(--red2);border-color:var(--red2)}
+#result-announce.draw{color:var(--dim);border-color:var(--muted)}
+#game-footer{padding:10px 24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;min-height:50px;background:rgba(6,3,5,0.85);gap:16px}
+#status-msg{font-size:10px;letter-spacing:2px;color:var(--dim)}
+#backend-state{font-size:9px;letter-spacing:2px;color:var(--ok)}
+.footer-credit{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+.footer-credit span{font-size:9px;letter-spacing:2px;color:var(--dim)}
+.footer-credit a{font-size:9px;letter-spacing:2px;color:var(--text);text-decoration:none}
+.footer-credit a:hover{color:var(--red)}
+#round-btn,#round-btn-mobile{font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:4px;padding:10px 32px;background:transparent;border:1px solid var(--red);color:var(--red);cursor:pointer;transition:all 0.2s}
+#round-btn:hover,#round-btn-mobile:hover{background:var(--red);color:#fff}
+#round-btn:disabled,#round-btn-mobile:disabled{opacity:0.25;cursor:not-allowed;background:transparent;color:var(--dim);border-color:var(--muted)}
+@media (max-width:860px){
+  html,body{overflow:auto}
+  #game{overflow:auto}
+  #game-header,#game-footer{padding:12px 16px;flex-wrap:wrap}
+  #mobile-action-bar{display:block}
+  #game-arena{flex-direction:column;overflow:visible}
+  #player-arena{border-right:none;border-bottom:1px solid var(--border)}
+  #center-overlay{top:50%;margin-top:-20px}
+  #header-right{width:100%;justify-content:space-between}
+  #round-btn{display:none}
+  #round-btn-mobile{width:100%}
+  .footer-credit{width:100%;justify-content:flex-start}
+}
+</style>
+</head>
+<body>
+<canvas id="bg-canvas"></canvas>
+
+<div id="landing">
+  <div id="floating-hands">
+    <div class="fh" style="left:5%;top:10%;animation-delay:0s">&#x270A;</div>
+    <div class="fh" style="right:8%;top:15%;animation-delay:2s">&#x270B;</div>
+    <div class="fh" style="left:15%;bottom:12%;animation-delay:4s">&#x270C;&#xFE0F;</div>
+    <div class="fh" style="right:12%;bottom:20%;animation-delay:1s">&#x270A;</div>
+    <div class="fh" style="left:40%;top:5%;animation-delay:3s;font-size:80px">&#x270B;</div>
+    <div class="fh" style="right:35%;bottom:8%;animation-delay:5s;font-size:80px">&#x270C;&#xFE0F;</div>
+  </div>
+  <div id="landing-content">
+    <div id="logo-text">handsoff-vercel-app</div>
+    <div id="logo-sub">Rock &middot; Paper &middot; Scissors</div>
+    <div id="vs-badge">Human <span>VS</span> Machine</div>
+    <div id="landing-gestures">
+      <div class="lg-card"><div class="lg-icon">&#x270A;</div><div class="lg-name">ROCK</div></div>
+      <div class="lg-card"><div class="lg-icon">&#x270B;</div><div class="lg-name">PAPER</div></div>
+      <div class="lg-card"><div class="lg-icon">&#x270C;&#xFE0F;</div><div class="lg-name">SCISSORS</div></div>
+    </div>
+    <button id="enter-btn" onclick="goToLogin()"><span>&#9654; &nbsp; ENTER ARENA</span></button>
+    <div id="scroll-hint">Use hand gestures to play &middot; Camera required</div>
+    <div class="creator-bio">
+      <div class="creator-name">CREATED BY ADI</div>
+      <div class="creator-links">
+        <a href="https://github.com/SaVvyCE" target="_blank" rel="noreferrer">GITHUB</a>
+        <a href="https://linktr.ee/ShY_vy" target="_blank" rel="noreferrer">LINKTREE</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="login-page">
+  <div id="login-box">
+    <div id="login-title">SIGN IN</div>
+    <div id="login-subtitle">Persistent account access</div>
+    <div class="lf">
+      <label for="login-name">Fighter name</label>
+      <input id="login-name" type="text" placeholder="ENTER NAME" maxlength="16" autocomplete="username"/>
+    </div>
+    <div class="lf">
+      <label for="login-pass">Password</label>
+      <input id="login-pass" type="password" placeholder="ENTER PASSWORD" autocomplete="current-password"/>
+    </div>
+    <div id="login-error"></div>
+    <button id="login-btn" onclick="doLogin()"><span>&#9654; &nbsp; ENTER THE ARENA</span></button>
+    <div class="ldiv"><span>note</span></div>
+    <div class="lhint">First sign-in creates your account.<br>Your match history and career record are saved on the backend.</div>
+    <button id="back-btn" onclick="goBack()">&larr; back</button>
+  </div>
+</div>
+
+<div id="transition-screen">
+  <div id="transition-text">LOADING ARENA</div>
+  <div class="bar-loader"><div class="bar-fill" id="bar-fill"></div></div>
+</div>
+
+<div id="game">
+  <div id="game-header">
+    <div id="game-logo">handsoff-vercel-app</div>
+    <div id="header-right">
+      <div id="scoreboard">
+        <div class="sc-item"><span class="sc-label">PLAYER</span><span class="sc-val acc" id="sc-player">0</span></div>
+        <div class="sc-item"><span class="sc-label">ROUND</span><span class="sc-val" id="sc-round">-</span></div>
+        <div class="sc-item"><span class="sc-label">CPU</span><span class="sc-val" id="sc-cpu">0</span></div>
+      </div>
+      <div id="player-meta">
+        <div id="player-tag-name"></div>
+        <div id="career-record">Career W 0 / L 0 / D 0</div>
+      </div>
+      <button id="logout-btn" onclick="logout()">LOG OUT</button>
+    </div>
+  </div>
+  <div id="mobile-action-bar">
+    <button id="round-btn-mobile" disabled onclick="startRound()">&#9654; &nbsp; START ROUND</button>
+  </div>
+  <div id="game-arena">
+    <div class="arena-side" id="player-arena">
+      <div class="side-header">Your Hand</div>
+      <div id="video-container">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="hand-canvas"></canvas>
+        <div id="gesture-tag">
+          <span id="gesture-name">-</span>
+          <span id="gesture-conf">SHOW HAND</span>
+        </div>
+      </div>
+    </div>
+    <div id="center-overlay">
+      <div id="countdown-num"></div>
+      <div id="result-announce"></div>
+    </div>
+    <div class="arena-side" id="cpu-arena">
+      <div class="side-header">CPU Hand</div>
+      <div id="cpu-container">
+        <canvas id="cpu-hand-canvas"></canvas>
+        <div id="cpu-tag">
+          <span id="cpu-gesture-name">-</span>
+          <span id="cpu-status-text">WAITING</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="game-footer">
+    <div>
+      <div id="status-msg">Camera initializing...</div>
+      <div id="backend-state">Backend disconnected</div>
+    </div>
+    <div class="footer-credit">
+      <span>ADI</span>
+      <a href="https://github.com/SaVvyCE" target="_blank" rel="noreferrer">GitHub</a>
+      <a href="https://linktr.ee/ShY_vy" target="_blank" rel="noreferrer">Linktree</a>
+    </div>
+    <button id="round-btn" disabled onclick="startRound()">&#9654; &nbsp; START ROUND</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script>
+const API_TOKEN_KEY='handoff_token';
+const LOCAL_PLAYER_KEY='handoff_local_player';
+const LOCAL_STATS_PREFIX='handoff_stats_';
+const bgC=document.getElementById('bg-canvas');
+const bgX=bgC.getContext('2d');
+let BW,BH;
+const DOTS=[];
+
+const state={
+  token:localStorage.getItem(API_TOKEN_KEY)||'',
+  playerName:'',
+  playerKey:'',
+  authReady:false,
+  gameReady:false,
+  camera:null,
+  hands:null,
+  backendAvailable:false,
+  sessionStats:{wins:0,losses:0,draws:0},
+  careerStats:{wins:0,losses:0,draws:0,totalRounds:0}
+};
+
+function resizeBg(){BW=bgC.width=window.innerWidth;BH=bgC.height=window.innerHeight;}
+resizeBg();
+window.addEventListener('resize',resizeBg);
+for(let i=0;i<85;i++) DOTS.push({x:Math.random()*1400,y:Math.random()*900,vx:(Math.random()-.5)*.28,vy:(Math.random()-.5)*.28,r:Math.random()*1.4+0.3});
+
+function drawBg(){
+  bgX.clearRect(0,0,BW,BH);
+  bgX.fillStyle='#060408';
+  bgX.fillRect(0,0,BW,BH);
+  const cx=BW/2,cy=BH/2;
+  const rg=bgX.createRadialGradient(cx,cy*0.7,0,cx,cy,Math.max(BW,BH)*0.65);
+  rg.addColorStop(0,'rgba(120,8,20,0.35)');
+  rg.addColorStop(0.4,'rgba(70,4,10,0.2)');
+  rg.addColorStop(1,'rgba(0,0,0,0)');
+  bgX.fillStyle=rg;
+  bgX.fillRect(0,0,BW,BH);
+  const vg=bgX.createRadialGradient(cx,cy,BH*0.25,cx,cy,BH*1.15);
+  vg.addColorStop(0,'rgba(0,0,0,0)');
+  vg.addColorStop(1,'rgba(0,0,0,0.8)');
+  bgX.fillStyle=vg;
+  bgX.fillRect(0,0,BW,BH);
+  bgX.strokeStyle='rgba(200,30,50,0.045)';
+  bgX.lineWidth=1;
+  for(let x=0;x<BW;x+=BW/20){bgX.beginPath();bgX.moveTo(x,0);bgX.lineTo(x,BH);bgX.stroke();}
+  for(let y=0;y<BH;y+=BH/14){bgX.beginPath();bgX.moveTo(0,y);bgX.lineTo(BW,y);bgX.stroke();}
+  const t=Date.now();
+  DOTS.forEach(d=>{
+    d.x+=d.vx;
+    d.y+=d.vy;
+    if(d.x<0)d.x=BW;
+    if(d.x>BW)d.x=0;
+    if(d.y<0)d.y=BH;
+    if(d.y>BH)d.y=0;
+    const pulse=0.28+0.22*Math.sin(t*.0009+d.x*.005);
+    bgX.beginPath();
+    bgX.arc(d.x,d.y,d.r,0,Math.PI*2);
+    bgX.fillStyle=`rgba(255,50,60,${pulse})`;
+    bgX.fill();
+  });
+  bgX.lineWidth=0.5;
+  for(let i=0;i<DOTS.length;i++) for(let j=i+1;j<DOTS.length;j++){
+    const dx=DOTS[i].x-DOTS[j].x;
+    const dy=DOTS[i].y-DOTS[j].y;
+    const d=Math.sqrt(dx*dx+dy*dy);
+    if(d<100){
+      const a=(1-d/100)*.11;
+      bgX.strokeStyle=`rgba(255,40,50,${a})`;
+      bgX.beginPath();
+      bgX.moveTo(DOTS[i].x,DOTS[i].y);
+      bgX.lineTo(DOTS[j].x,DOTS[j].y);
+      bgX.stroke();
+    }
+  }
+  requestAnimationFrame(drawBg);
+}
+drawBg();
+
+function setBackendState(text,ok){
+  const el=document.getElementById('backend-state');
+  el.textContent=text;
+  el.style.color=ok?'var(--ok)':'var(--red2)';
+}
+
+function setLoginError(text){
+  const err=document.getElementById('login-error');
+  err.textContent=text;
+  err.className=text?'show':'';
+}
+
+function goToLogin(){
+  document.getElementById('landing').style.display='none';
+  document.getElementById('login-page').style.display='flex';
+  setTimeout(()=>document.getElementById('login-name').focus(),80);
+}
+
+function goBack(){
+  document.getElementById('login-page').style.display='none';
+  document.getElementById('landing').style.display='flex';
+}
+
+async function api(path,options={}){
+  const headers={'Content-Type':'application/json',...(options.headers||{})};
+  if(state.token) headers.Authorization=`Bearer ${state.token}`;
+  const response=await fetch(path,{...options,headers});
+  const isJson=(response.headers.get('content-type')||'').includes('application/json');
+  const payload=isJson?await response.json():null;
+  if(!response.ok){
+    const message=payload&&payload.error?payload.error:`Request failed (${response.status})`;
+    throw new Error(message);
+  }
+  return payload;
+}
+
+function saveToken(token){
+  state.token=token||'';
+  if(token) localStorage.setItem(API_TOKEN_KEY,token);
+  else localStorage.removeItem(API_TOKEN_KEY);
+}
+
+function getLocalStatsKey(){
+  return `${LOCAL_STATS_PREFIX}${state.playerKey}`;
+}
+
+function loadLocalPlayer(){
+  try{
+    return JSON.parse(localStorage.getItem(LOCAL_PLAYER_KEY)||'null');
+  }catch{
+    return null;
+  }
+}
+
+function getLocalStats(){
+  try{
+    return JSON.parse(localStorage.getItem(getLocalStatsKey())||'null')||{wins:0,losses:0,draws:0,totalRounds:0};
+  }catch{
+    return {wins:0,losses:0,draws:0,totalRounds:0};
+  }
+}
+
+function saveLocalStats(stats){
+  localStorage.setItem(getLocalStatsKey(),JSON.stringify(stats));
+}
+
+function isSignedIn(){
+  return Boolean(state.playerName && state.playerKey && (state.backendAvailable ? state.token : true));
+}
+
+function setRoundButtonsDisabled(disabled){
+  document.getElementById('round-btn').disabled=disabled;
+  document.getElementById('round-btn-mobile').disabled=disabled;
+}
+
+function resetSessionState(){
+  pScore=0;
+  cScore=0;
+  roundNum=0;
+  phase='idle';
+  currentGesture=null;
+  handLandmarks=null;
+  cameraReady=false;
+  state.sessionStats={wins:0,losses:0,draws:0};
+  document.getElementById('sc-player').textContent='0';
+  document.getElementById('sc-cpu').textContent='0';
+  document.getElementById('sc-round').textContent='-';
+  document.getElementById('gesture-name').textContent='-';
+  document.getElementById('gesture-conf').textContent='SHOW HAND';
+  document.getElementById('cpu-gesture-name').textContent='-';
+  document.getElementById('cpu-status-text').textContent='WAITING';
+  setRoundButtonsDisabled(true);
+}
+
+function updateCareerRecord(){
+  const s=state.careerStats;
+  document.getElementById('career-record').textContent=`Career W ${s.wins} / L ${s.losses} / D ${s.draws}`;
+}
+
+async function loadCareerStats(){
+  if(!state.backendAvailable){
+    state.careerStats=getLocalStats();
+    updateCareerRecord();
+    return;
+  }
+  const payload=await api('/api/stats/me',{method:'GET'});
+  state.careerStats=payload.stats;
+  updateCareerRecord();
+}
+
+function showGame(){
+  document.getElementById('landing').style.display='none';
+  document.getElementById('login-page').style.display='none';
+  document.getElementById('game').style.display='flex';
+  document.getElementById('player-tag-name').textContent=state.playerName;
+}
+
+async function doLogin(){
+  const username=document.getElementById('login-name').value.trim();
+  const password=document.getElementById('login-pass').value;
+  const button=document.getElementById('login-btn');
+  setLoginError('');
+  if(!username){setLoginError('Enter a fighter name');return;}
+  if(password.length<6){setLoginError('Password too short (min 6 chars)');return;}
+  button.disabled=true;
+  try{
+    if(state.backendAvailable){
+      const payload=await api('/api/auth/login',{
+        method:'POST',
+        body:JSON.stringify({username,password})
+      });
+      saveToken(payload.token);
+      state.playerName=payload.player.displayName;
+      state.playerKey=payload.player.usernameKey;
+      setBackendState(payload.created?'Backend connected - account created':'Backend connected - login successful',true);
+    }else{
+      state.playerName=username.toUpperCase();
+      state.playerKey=username.trim().toLowerCase();
+      localStorage.setItem(LOCAL_PLAYER_KEY,JSON.stringify({playerName:state.playerName,playerKey:state.playerKey}));
+      setBackendState('Demo mode - saved in this browser',true);
+    }
+    showTransition(async()=>{
+      showGame();
+      resetSessionState();
+      await loadCareerStats();
+      await initGame();
+    });
+  }catch(error){
+    setLoginError(error.message);
+    setBackendState('Backend login failed',false);
+  }finally{
+    button.disabled=false;
+  }
+}
+
+function showTransition(onDone){
+  const ts=document.getElementById('transition-screen');
+  const bar=document.getElementById('bar-fill');
+  bar.style.width='0%';
+  ts.style.display='flex';
+  requestAnimationFrame(()=>{bar.style.width='100%';});
+  setTimeout(async()=>{
+    ts.style.display='none';
+    await onDone();
+  },1700);
+}
+
+function teardownGame(){
+  if(state.camera&&typeof state.camera.stop==='function') state.camera.stop();
+  const video=document.getElementById('video');
+  const stream=video.srcObject;
+  if(stream&&stream.getTracks) stream.getTracks().forEach(track=>track.stop());
+  video.srcObject=null;
+  state.camera=null;
+  state.hands=null;
+  state.gameReady=false;
+}
+
+function logout(){
+  teardownGame();
+  saveToken('');
+  localStorage.removeItem(LOCAL_PLAYER_KEY);
+  state.playerName='';
+  state.playerKey='';
+  state.careerStats={wins:0,losses:0,draws:0,totalRounds:0};
+  updateCareerRecord();
+  document.getElementById('game').style.display='none';
+  document.getElementById('login-page').style.display='flex';
+  document.getElementById('login-pass').value='';
+  setBackendState('Backend disconnected',false);
+  resetSessionState();
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&document.getElementById('login-page').style.display==='flex') doLogin();
+});
+
+let pScore=0,cScore=0,roundNum=0,phase='idle',currentGesture=null,handLandmarks=null,cameraReady=false;
+const cpuCanvas=document.getElementById('cpu-hand-canvas');
+const cpuCtx=cpuCanvas.getContext('2d');
+function genIdle(){return[{x:.5,y:.85},{x:.46,y:.72},{x:.43,y:.62},{x:.41,y:.55},{x:.40,y:.50},{x:.50,y:.70},{x:.50,y:.57},{x:.50,y:.47},{x:.50,y:.40},{x:.57,y:.69},{x:.57,y:.55},{x:.57,y:.45},{x:.57,y:.37},{x:.63,y:.71},{x:.63,y:.58},{x:.63,y:.49},{x:.63,y:.42},{x:.69,y:.75},{x:.70,y:.64},{x:.70,y:.57},{x:.70,y:.51}];}
+function genRock(){return[{x:.5,y:.85},{x:.46,y:.74},{x:.44,y:.67},{x:.43,y:.72},{x:.43,y:.78},{x:.50,y:.70},{x:.50,y:.60},{x:.50,y:.67},{x:.50,y:.72},{x:.57,y:.68},{x:.57,y:.58},{x:.57,y:.66},{x:.57,y:.72},{x:.63,y:.70},{x:.63,y:.61},{x:.63,y:.68},{x:.63,y:.74},{x:.69,y:.75},{x:.70,y:.68},{x:.70,y:.73},{x:.70,y:.78}];}
+function genPaper(){return[{x:.5,y:.85},{x:.45,y:.74},{x:.41,y:.64},{x:.39,y:.56},{x:.38,y:.49},{x:.50,y:.70},{x:.50,y:.56},{x:.50,y:.44},{x:.50,y:.34},{x:.57,y:.69},{x:.57,y:.54},{x:.57,y:.42},{x:.57,y:.31},{x:.63,y:.71},{x:.63,y:.57},{x:.63,y:.46},{x:.63,y:.36},{x:.69,y:.75},{x:.70,y:.63},{x:.70,y:.55},{x:.70,y:.47}];}
+function genScissors(){return[{x:.5,y:.85},{x:.45,y:.74},{x:.42,y:.67},{x:.42,y:.73},{x:.42,y:.78},{x:.50,y:.70},{x:.49,y:.57},{x:.48,y:.46},{x:.47,y:.37},{x:.57,y:.69},{x:.57,y:.55},{x:.56,y:.44},{x:.55,y:.35},{x:.63,y:.70},{x:.63,y:.62},{x:.63,y:.68},{x:.63,y:.74},{x:.69,y:.75},{x:.70,y:.68},{x:.70,y:.73},{x:.70,y:.78}];}
+const POSES={idle:genIdle(),rock:genRock(),paper:genPaper(),scissors:genScissors()};
+let cpuCur=POSES.idle,cpuTgt=POSES.idle,cpuT=1,cpuShuf=false,cpuKey='idle';
+function lerp(a,b,t){return a.map((p,i)=>({x:p.x+(b[i].x-p.x)*t,y:p.y+(b[i].y-p.y)*t}));}
+const CONNS=[[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[0,9],[9,10],[10,11],[11,12],[0,13],[13,14],[14,15],[15,16],[0,17],[17,18],[18,19],[19,20],[5,9],[9,13],[13,17],[0,17]];
+
+function drawCPU(lm,hot){
+  const W=cpuCanvas.width,H=cpuCanvas.height;
+  cpuCtx.clearRect(0,0,W,H);
+  if(!lm)return;
+  const pts=lm.map(p=>({x:p.x*W,y:p.y*H}));
+  cpuCtx.beginPath();
+  [0,1,5,9,13,17].forEach((i,k)=>k===0?cpuCtx.moveTo(pts[i].x,pts[i].y):cpuCtx.lineTo(pts[i].x,pts[i].y));
+  cpuCtx.closePath();
+  cpuCtx.fillStyle=hot?'rgba(255,107,74,0.07)':'rgba(255,59,59,0.07)';
+  cpuCtx.fill();
+  cpuCtx.strokeStyle=hot?'rgba(255,107,74,0.48)':'rgba(255,59,59,0.44)';
+  cpuCtx.lineWidth=Math.max(1,W*.004);
+  CONNS.forEach(([a,b])=>{cpuCtx.beginPath();cpuCtx.moveTo(pts[a].x,pts[a].y);cpuCtx.lineTo(pts[b].x,pts[b].y);cpuCtx.stroke();});
+  pts.forEach((p,i)=>{
+    const tip=[4,8,12,16,20].includes(i);
+    cpuCtx.beginPath();
+    cpuCtx.arc(p.x,p.y,tip?W*.016:W*.01,0,Math.PI*2);
+    cpuCtx.fillStyle=tip?(hot?'#ff6b4a':'#ff3b3b'):(hot?'rgba(255,107,74,.7)':'rgba(255,59,59,.6)');
+    cpuCtx.fill();
+  });
+}
+
+function animCPU(){
+  if(cpuShuf){
+    const k=['rock','paper','scissors'][Math.floor(Date.now()/120)%3];
+    drawCPU(POSES[k].map(p=>({x:p.x+(Math.random()-.5)*.015,y:p.y+(Math.random()-.5)*.015})),true);
+  }else{
+    if(cpuT<1){
+      cpuT=Math.min(1,cpuT+.06);
+      cpuCur=lerp(cpuCur,cpuTgt,cpuT);
+    }
+    drawCPU(cpuCur,cpuKey!=='idle');
+  }
+  requestAnimationFrame(animCPU);
+}
+function setCPU(k){cpuKey=k;cpuTgt=POSES[k]||POSES.idle;cpuT=0;}
+function resizeCPU(){const c=document.getElementById('cpu-container');cpuCanvas.width=c.clientWidth;cpuCanvas.height=c.clientHeight;}
+
+const hCvs=document.getElementById('hand-canvas');
+const hCtx=hCvs.getContext('2d');
+function resizeHand(){const v=document.getElementById('video-container');hCvs.width=v.clientWidth;hCvs.height=v.clientHeight;}
+function drawPlayer(lm){
+  const W=hCvs.width,H=hCvs.height;
+  hCtx.clearRect(0,0,W,H);
+  if(!lm)return;
+  const pts=lm.map(p=>({x:(1-p.x)*W,y:p.y*H}));
+  hCtx.strokeStyle='rgba(255,59,59,0.36)';
+  hCtx.lineWidth=Math.max(1,W*.004);
+  CONNS.forEach(([a,b])=>{hCtx.beginPath();hCtx.moveTo(pts[a].x,pts[a].y);hCtx.lineTo(pts[b].x,pts[b].y);hCtx.stroke();});
+  pts.forEach((p,i)=>{
+    const tip=[4,8,12,16,20].includes(i);
+    hCtx.beginPath();
+    hCtx.arc(p.x,p.y,tip?W*.016:W*.01,0,Math.PI*2);
+    hCtx.fillStyle=tip?'#ff3b3b':'rgba(255,59,59,.6)';
+    hCtx.fill();
+  });
+}
+
+function classify(lm){
+  if(!lm||lm.length<21) return null;
+  const extended=(tip,pip)=>lm[tip].y<lm[pip].y;
+  const n=[extended(8,6),extended(12,10),extended(16,14),extended(20,18)].filter(Boolean).length;
+  if(n===0) return 'rock';
+  if(n===4) return 'paper';
+  if(extended(8,6)&&extended(12,10)&&!extended(16,14)&&!extended(20,18)) return 'scissors';
+  return null;
+}
+
+const BEATS={rock:'scissors',paper:'rock',scissors:'paper'};
+const LBL={rock:'ROCK',paper:'PAPER',scissors:'SCISSORS'};
+
+function startRound(){
+  if(phase!=='idle'||!isSignedIn()) return;
+  phase='countdown';
+  setRoundButtonsDisabled(true);
+  document.getElementById('result-announce').style.display='none';
+  cpuShuf=true;
+  document.getElementById('cpu-status-text').textContent='CHOOSING...';
+  document.getElementById('cpu-gesture-name').textContent='?';
+  document.getElementById('status-msg').textContent='SHOW YOUR HAND!';
+  let c=3;
+  const cd=document.getElementById('countdown-num');
+  cd.style.opacity=1;
+  cd.textContent=c;
+  const tmr=setInterval(()=>{
+    c--;
+    if(c>0) cd.textContent=c;
+    else if(c===0) cd.textContent='SHOOT!';
+    else{
+      clearInterval(tmr);
+      cd.style.opacity=0;
+      cpuShuf=false;
+      reveal();
+    }
+  },1000);
+}
+
+async function persistRound(playerChoice,cpuChoice,result){
+  if(!state.backendAvailable){
+    state.careerStats.wins+=result==='win'?1:0;
+    state.careerStats.losses+=result==='loss'?1:0;
+    state.careerStats.draws+=result==='draw'?1:0;
+    state.careerStats.totalRounds+=1;
+    saveLocalStats(state.careerStats);
+    updateCareerRecord();
+    setBackendState('Demo mode - stats saved locally',true);
+    return;
+  }
+  try{
+    const payload=await api('/api/rounds',{
+      method:'POST',
+      body:JSON.stringify({
+        roundNumber:roundNum,
+        playerGesture:playerChoice,
+        cpuGesture:cpuChoice,
+        result
+      })
+    });
+    state.careerStats=payload.stats;
+    updateCareerRecord();
+    setBackendState('Backend synced',true);
+  }catch(error){
+    setBackendState(`Sync failed: ${error.message}`,false);
+  }
+}
+
+function applyRoundResult(resultKey){
+  if(resultKey==='win') state.sessionStats.wins++;
+  else if(resultKey==='loss') state.sessionStats.losses++;
+  else state.sessionStats.draws++;
+}
+
+async function reveal(){
+  roundNum++;
+  document.getElementById('sc-round').textContent=roundNum;
+  const choices=['rock','paper','scissors'];
+  const cc=choices[Math.floor(Math.random()*3)];
+  const pc=currentGesture;
+  let resultKey='draw';
+  setCPU(cc);
+  document.getElementById('cpu-gesture-name').textContent=LBL[cc]||'-';
+  document.getElementById('cpu-status-text').textContent='CPU PLAYED';
+  const ra=document.getElementById('result-announce');
+  ra.className='';
+  ra.style.display='block';
+  if(!pc){
+    ra.textContent='NO HAND!';
+    ra.className='draw';
+    document.getElementById('status-msg').textContent='No gesture detected';
+  }else if(pc===cc){
+    ra.textContent='DRAW';
+    ra.className='draw';
+    document.getElementById('status-msg').textContent=`Both played ${LBL[pc]}`;
+  }else if(BEATS[pc]===cc){
+    resultKey='win';
+    ra.textContent='YOU WIN!';
+    pScore++;
+    document.getElementById('sc-player').textContent=pScore;
+    document.getElementById('status-msg').textContent=`${LBL[pc]} beats ${LBL[cc]}`;
+  }else{
+    resultKey='loss';
+    ra.textContent='CPU WINS';
+    ra.className='lose';
+    cScore++;
+    document.getElementById('sc-cpu').textContent=cScore;
+    document.getElementById('status-msg').textContent=`${LBL[cc]} beats ${LBL[pc]}`;
+  }
+  applyRoundResult(resultKey);
+  await persistRound(pc||null,cc,resultKey);
+  phase='reveal';
+  setTimeout(()=>{
+    ra.style.display='none';
+    setCPU('idle');
+    document.getElementById('cpu-gesture-name').textContent='-';
+    document.getElementById('cpu-status-text').textContent='WAITING';
+    phase='idle';
+    setRoundButtonsDisabled(false);
+    document.getElementById('status-msg').textContent='Ready - press start';
+  },2600);
+}
+
+async function initGame(){
+  if(state.gameReady) return;
+  resizeHand();
+  resizeCPU();
+  if(!window.__handoffCpuAnimStarted){
+    window.__handoffCpuAnimStarted=true;
+    animCPU();
+  }
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:640,height:480}});
+    const vid=document.getElementById('video');
+    vid.srcObject=stream;
+    document.getElementById('status-msg').textContent='Loading hand tracking...';
+    state.hands=new Hands({locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
+    state.hands.setOptions({maxNumHands:1,modelComplexity:1,minDetectionConfidence:.7,minTrackingConfidence:.7});
+    state.hands.onResults(res=>{
+      if(res.multiHandLandmarks&&res.multiHandLandmarks.length>0){
+        const lm=res.multiHandLandmarks[0];
+        handLandmarks=lm;
+        drawPlayer(lm);
+        const g=classify(lm);
+        currentGesture=g;
+        document.getElementById('gesture-name').textContent=g?LBL[g]:'...';
+        document.getElementById('gesture-conf').textContent=g?'DETECTED':'UNCLEAR';
+        if(!cameraReady){
+          cameraReady=true;
+          setRoundButtonsDisabled(false);
+          document.getElementById('status-msg').textContent='Ready - press start';
+        }
+      }else{
+        handLandmarks=null;
+        currentGesture=null;
+        drawPlayer(null);
+        document.getElementById('gesture-name').textContent='-';
+        document.getElementById('gesture-conf').textContent='SHOW HAND';
+      }
+    });
+    state.camera=new Camera(vid,{onFrame:async()=>{await state.hands.send({image:vid});},width:640,height:480});
+    state.camera.start();
+    state.gameReady=true;
+    setBackendState('Backend connected',true);
+  }catch(error){
+    document.getElementById('status-msg').textContent=`Camera error: ${error.message}`;
+  }
+}
+
+async function tryAutoLogin(){
+  try{
+    await api('/api/health',{method:'GET'});
+    state.backendAvailable=true;
+    setBackendState('Backend connected',true);
+  }catch{
+    state.backendAvailable=false;
+    setBackendState('Demo mode - no backend attached',false);
+  }
+  if(state.backendAvailable && !state.token) return;
+  try{
+    if(state.backendAvailable){
+      const payload=await api('/api/session',{method:'GET'});
+      state.playerName=payload.player.displayName;
+      state.playerKey=payload.player.usernameKey;
+      setBackendState('Backend connected - session restored',true);
+      showGame();
+      resetSessionState();
+      await loadCareerStats();
+      await initGame();
+      return;
+    }
+    const localPlayer=loadLocalPlayer();
+    if(localPlayer){
+      state.playerName=localPlayer.playerName;
+      state.playerKey=localPlayer.playerKey;
+      showGame();
+      resetSessionState();
+      await loadCareerStats();
+      await initGame();
+    }
+  }catch{
+    saveToken('');
+    setBackendState(state.backendAvailable?'Backend disconnected':'Demo mode - no backend attached',false);
+  }
+}
+
+window.addEventListener('resize',()=>{resizeHand();resizeCPU();});
+tryAutoLogin();
+</script>
+</body>
+</html>
